@@ -21,10 +21,20 @@ Prefixes are drawn from `strings.txt` (one per line). When you create a domain, 
 ---
 
 ## Installation
+
+### Directly
 ```bash
 git clone https://github.com/NoobKeksTV/WemxToCloudflare.git
 cd WemxToCloudflare
 npm install express request dotenv
+```
+
+### docker-compose
+
+```bash
+git clone https://github.com/NoobKeksTV/WemxToCloudflare.git
+cd WemxToCloudflare/Dockerized
+docker-compose up-d
 ```
 
 ---
@@ -32,7 +42,7 @@ npm install express request dotenv
 ## Configuration (`.env`)
 ```ini
 # Server
-APIPort=8889
+APIPort=9765
 
 # Simple header auth (exact match; no "Bearer" etc.)
 APISecret=your_super_secret
@@ -62,14 +72,21 @@ delta
 
 ---
 
-## Run
-```bash
-node index.js
-# API ist Online :)
-```
-
+## Run the App
 The server listens on `http://localhost:${APIPort}` (default `8889`).
 
+### Directly:
+
+```bash
+node index.js
+# API is Online :)
+```
+
+
+### Dockerized:
+```bash
+docker-compose up-d
+```
 ---
 
 
@@ -83,7 +100,7 @@ It must match your `.env` value **exactly** (no `Bearer` scheme).
 
 ---
 ## Supported Service Names
-| Service     | Creates   | 
+| Service     | Service Prefix   | 
 |-----------|--------|
 | minecraft | _minecraft._tcp. |
 

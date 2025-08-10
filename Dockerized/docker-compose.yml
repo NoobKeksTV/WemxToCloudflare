@@ -1,0 +1,9 @@
+services:
+  wemxToCF:
+    image: zockerboyshd/wemx-to-cf:latest
+    env_file: .env
+    ports:
+      - "9765:9765"
+    volumes:
+      - ./strings.txt:/app/strings.txt:rw
+    restart: unless-stopped
