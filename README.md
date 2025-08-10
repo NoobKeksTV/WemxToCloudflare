@@ -43,7 +43,7 @@ CFAuthKey=your_cloudflare_api_token
 
 # Domain suffix used when creating & deleting a domain
 # e.g. ".google.de"
-DomainSuffix=your_domain_suffix
+DomainSuffix=.domain.com
 ```
 
 ---
