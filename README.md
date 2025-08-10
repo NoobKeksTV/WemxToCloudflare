@@ -72,12 +72,20 @@ The server listens on `http://localhost:${APIPort}` (default `8889`).
 
 ---
 
+
+
 ## Authentication
 Every endpoint requires the header:
 ```
 Authorization: <APISecret>
 ```
 It must match your `.env` value **exactly** (no `Bearer` scheme).
+
+---
+## Supported Service Names
+| Service     | Creates   | 
+|-----------|--------|
+| minecraft | _minecraft._tcp. |
 
 ---
 
