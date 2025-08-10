@@ -19,7 +19,7 @@ ApiServer.use(express.json());
 
 function sendLogging(msg) { console.log(String(msg)); }
 
-ApiServer.listen(APIPort, () => sendLogging('API ist Online :)'));
+ApiServer.listen(APIPort, () => sendLogging('API is Online :)'));
 
 loadStrings();
 
@@ -38,16 +38,16 @@ function getService(service = ""){
     return service;
 }
 ApiServer.post('/getAndCreateDomain', (req, res) => {
-    sendLogging("API Zugriff!!");
+    sendLogging("API Access /getAndCreateDomain");
 
     const authHeader = req.get('Authorization');
     if (!authHeader || authHeader !== APISecret) {
-        sendLogging("Ungültiger oder fehlender Authorization-Header");
+        sendLogging("Invalid Auth Header");
         return res.status(401).json({ error: "Unauthorized" });
     }
 
     if (!req.is('application/json')) {
-        sendLogging("Non JSON data received!");
+        sendLogging("No JSON data received!");
         return res.status(415).end();
     }
 
@@ -82,34 +82,35 @@ ApiServer.post('/getAndCreateDomain', (req, res) => {
         body: bodyData
     }, (err, res2, body) => {
         if (err) {
-            sendLogging("Transportfehler: " + err.message);
+            sendLogging("Transportation error: " + err.message);
             return res.status(502).end();
         }
         //   sendLogging(`CF status= ${res2.statusCode} body= ${JSON.stringify(body)}`);
         if (res2.statusCode >= 200 && res2.statusCode < 300) {
-            return res.status(200).end(`${randomName}.egopvp-hosting.com`);
+            return res.status(200).end(`${randomName}${DomainSuffix}`);
         } else {
             return res.status(400).end();
         }
     });
 });
 ApiServer.post('/removeDomain', (req, res) => {
-    sendLogging("API Zugriff!! /removeDomain");
+    sendLogging("API Access /removeDomain");
 
     const authHeader = req.get('Authorization');
     if (!authHeader || authHeader !== APISecret) {
-        sendLogging("Ungültiger oder fehlender Authorization-Header");
+        sendLogging("Invalid Auth Header");
         return res.status(401).json({ error: "Unauthorized" });
     }
 
     if (!req.is('application/json')) {
-        sendLogging("Non JSON data received!");
+        sendLogging("No JSON data received!");
         return res.status(415).end();
     }
 
     const { oldDomain, service } = req.body || {};
     if (!oldDomain || typeof oldDomain !== 'string') {
-        return res.status(400).json({ error: 'Field "oldDomain" is required (string).' });
+        sendLogging("No 'oldDomain' Specified");
+        return res.status(400).end();
     }
 
     let prefix = String(oldDomain).trim();
@@ -133,17 +134,17 @@ ApiServer.post('/removeDomain', (req, res) => {
         json: true
     }, (err, res2, body) => {
         if (err) {
-            sendLogging("Transportfehler (Lookup): " + err.message);
+            sendLogging("Transportation error: (Lookup): " + err.message);
             return res.status(502).end();
         }
         if (!(res2.statusCode >= 200 && res2.statusCode < 300) || !body || body.success === false) {
-            sendLogging(`CF Lookup fehlgeschlagen: status=${res2 && res2.statusCode} body=${JSON.stringify(body)}`);
+            sendLogging(`CF Lookup error: status=${res2 && res2.statusCode} body=${JSON.stringify(body)}`);
             return res.status(res2?.statusCode || 500).end();
         }
 
         const results = Array.isArray(body.result) ? body.result : [];
         if (results.length === 0) {
-            sendLogging(`Kein SRV-Record gefunden für ${fullRecordName}`);
+            sendLogging(`No SRV record found for ${fullRecordName}`);
             return res.status(404).end();
         }
 
@@ -165,7 +166,7 @@ ApiServer.post('/removeDomain', (req, res) => {
                 } else {
                     failed++;
                     failedItems.push({ id: rec.id, status: res3 && res3.statusCode, body: body3, err: err3 && err3.message });
-                    sendLogging(`Löschen fehlgeschlagen für ID=${rec.id}: status=${res3 && res3.statusCode} body=${JSON.stringify(body3)} err=${err3 && err3.message}`);
+                    sendLogging(`Removing error for ID=${rec.id}: status=${res3 && res3.statusCode} body=${JSON.stringify(body3)} err=${err3 && err3.message}`);
                 }
 
                 remaining--;
@@ -188,7 +189,7 @@ ApiServer.post('/removeDomain', (req, res) => {
 function loadStrings() {
     try {
         if (!fs.existsSync(filePath)) {
-            console.warn(`Datei ${filePath} existiert nicht – erstelle neue.`);
+            console.warn(`File ${filePath} doesnt exist – creating new.`);
             fs.writeFileSync(filePath, '', 'utf8');
         }
         const content = fs.readFileSync(filePath, 'utf8');
@@ -196,16 +197,16 @@ function loadStrings() {
             .split('\n')
             .map(line => line.trim())
             .filter(line => line.length > 0);
-        console.log(`Geladen: ${stringList.length} Strings`);
+        console.log(`Loaded: ${stringList.length} Strings`);
     } catch (err) {
-        console.error('Fehler beim Laden der Datei:', err);
+        console.error('Error loading the file:', err);
         stringList = [];
     }
 }
 
 function getRandomAndRemove() {
     if (stringList.length === 0) {
-        console.warn('Keine Strings mehr verfügbar.');
+        console.warn('No Strings Available');
         return null;
     }
     const index = Math.floor(Math.random() * stringList.length);
@@ -213,7 +214,7 @@ function getRandomAndRemove() {
     try {
         fs.writeFileSync(filePath, stringList.join('\n') + '\n', 'utf8');
     } catch (err) {
-        console.error('Fehler beim Schreiben der Datei:', err);
+        console.error('Error writing the file:', err);
     }
     return chosen;
 }
@@ -225,9 +226,9 @@ function addPrefixBackToFile(prefix) {
         stringList.push(clean);
         try {
             fs.writeFileSync(filePath, stringList.join('\n') + '\n', 'utf8');
-            sendLogging(`Prefix wiederhergestellt: ${clean}`);
+            sendLogging(`Prefix Restored: ${clean}`);
         } catch (err) {
-            console.error('Fehler beim Zurückschreiben der Datei:', err);
+            console.error('Error writing the file', err);
         }
     }
 }
