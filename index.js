@@ -22,19 +22,19 @@ ApiServer.listen(APIPort, () => sendLogging('API ist Online :)'));
 
 loadStrings();
 
-function getRandomName(service = "") {
+function getRandomName() {
     const name = getRandomAndRemove();
     if (!name) return null;
-
-    if (service === "minecraft") {
+    return name;
+}
+function getService(service = ""){
+ if (service === "minecraft") {
         service = "_minecraft._tcp.";
     } else if (service && !service.endsWith(".")) {
         service = service + ".";
     }
-
-    return service + name;
+    return service;
 }
-
 ApiServer.post('/getAndCreateDomain', (req, res) => {
     sendLogging("API Zugriff!!");
 
@@ -51,8 +51,9 @@ ApiServer.post('/getAndCreateDomain', (req, res) => {
 
     const recData = req.body;
 
-    const randomName = getRandomName(recData.service);
-    const srvName = `${randomName}.egopvp-hosting.com`;
+    const randomName = getRandomName();
+    const Service = getService(recData.service);
+    const srvName = `${Service}${randomName}.egopvp-hosting.com`;
 
     if (randomName == "null" || !randomName || randomName == null) {
         return res.status(500).json({ error: "No Strings available" });
@@ -84,7 +85,7 @@ ApiServer.post('/getAndCreateDomain', (req, res) => {
         }
         //   sendLogging(`CF status= ${res2.statusCode} body= ${JSON.stringify(body)}`);
         if (res2.statusCode >= 200 && res2.statusCode < 300) {
-            return res.status(200).end(srvName);
+            return res.status(200).end(`${randomName}.egopvp-hosting.com`);
         } else {
             return res.status(400).end("CF Error");
         }
@@ -104,6 +105,7 @@ ApiServer.post('/removeDomain', (req, res) => {
         return res.status(415).end();
     }
     const { oldDomain } = req.body || {};
+
     if (!oldDomain || typeof oldDomain !== 'string') {
         return res.status(400).json({ error: 'Field "oldDomain" is required (string).' });
     }
@@ -118,17 +120,17 @@ ApiServer.post('/removeDomain', (req, res) => {
     }, (err, res2, body) => {
         if (err) {
             sendLogging("Transportfehler (Lookup): " + err.message);
-            return res.status(502).json({ error: 'Transport error (lookup)' });
+            return res.status(502).end();
         }
         if (!(res2.statusCode >= 200 && res2.statusCode < 300) || !body || body.success === false) {
             sendLogging(`CF Lookup fehlgeschlagen: status=${res2 && res2.statusCode} body=${JSON.stringify(body)}`);
-            return res.status(res2?.statusCode || 500).json({ error: 'Lookup failed', details: body });
+            return res.status(res2?.statusCode || 500).end();
         }
 
         const results = Array.isArray(body.result) ? body.result : [];
         if (results.length === 0) {
             sendLogging(`Kein SRV-Record gefunden für ${oldDomain}`);
-            return res.status(404).json({ error: 'Record not found', oldDomain });
+            return res.status(404).end();
         }
 
         let remaining = results.length;
@@ -156,11 +158,11 @@ ApiServer.post('/removeDomain', (req, res) => {
                 if (remaining === 0) {
                     if (deleted > 0 && failed === 0) {
                         sendLogging("Alle Gelöscht")
-                        return res.status(200).json({ ok: true, deleted, oldDomain });
+                        return res.status(200).end();
                     }
                     if (deleted > 0 && failed > 0) {
                         sendLogging("Teile Gelöscht")
-                        return res.status(200).json({ ok: true, deleted, failed, oldDomain, failedItems });
+                        return res.status(200).end();
                     }
                     sendLogging({ error: 'Deletion failed', oldDomain, failedItems })
                     return res.status(500).end();
