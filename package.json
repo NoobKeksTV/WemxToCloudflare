@@ -8,5 +8,9 @@
     "dev": "node --run start -- --watch"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0",
+    "request": "^2.88.2"
+  }
 }
