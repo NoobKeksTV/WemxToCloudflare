@@ -1,5 +1,7 @@
 require('dotenv').config();
 
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const ApiServer = express();
 const sendRequest = require('request');
@@ -9,16 +11,19 @@ const APIPort = process.env.APIPort;
 const CFAuthKey = process.env.CFAuthKey;
 const CFApiURL = "https://api.cloudflare.com/client/v4/zones/" + process.env.CFZoneID + "/dns_records";
 
+const filePath = path.join(__dirname, 'strings.txt');
+let stringList = [];
+
 ApiServer.use(express.json());
 
 function sendLogging(msg) { console.log(String(msg)); }
 
 ApiServer.listen(APIPort, () => sendLogging('API ist Online :)'));
 
-function getRandomName(service) {
-    let name = "testName";
+loadStrings();
 
-    //TODO: NAME GENERIEREN
+function getRandomName(service) {
+    let name = getRandomAndRemove();
 
     if (service === "minecraft") {
 
@@ -75,9 +80,42 @@ ApiServer.post('/getAndCreateDomain', (req, res) => {
         }
         //   sendLogging(`CF status= ${res2.statusCode} body= ${JSON.stringify(body)}`);
         if (res2.statusCode >= 200 && res2.statusCode < 300) {
-            return res.status(200).end();
+            return res.status(200).end(srvName);
         } else {
             return res.status(400).end();
         }
     });
 });
+
+function loadStrings() {
+  try {
+    if (!fs.existsSync(filePath)) {
+      console.warn(`Datei ${filePath} existiert nicht – erstelle neue.`);
+      fs.writeFileSync(filePath, '', 'utf8');
+    }
+    const content = fs.readFileSync(filePath, 'utf8');
+    stringList = content
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+    console.log(`Geladen: ${stringList.length} Strings`);
+  } catch (err) {
+    console.error('Fehler beim Laden der Datei:', err);
+    stringList = [];
+  }
+}
+
+function getRandomAndRemove() {
+  if (stringList.length === 0) {
+    console.warn('Keine Strings mehr verfügbar.');
+    return null;
+  }
+  const index = Math.floor(Math.random() * stringList.length);
+  const chosen = stringList.splice(index, 1)[0];
+  try {
+    fs.writeFileSync(filePath, stringList.join('\n') + '\n', 'utf8');
+  } catch (err) {
+    console.error('Fehler beim Schreiben der Datei:', err);
+  }
+  return chosen;
+}

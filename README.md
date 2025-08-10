@@ -1,6 +1,7 @@
 # WemxToCloudflare
 
-This App acts as a safe "man in the middle" software so that our frontend/e-commerce backend can safely request CF domains without exposing sensitive data such as your Cloudflare API Keys to the E-Commerce Software in case of a Breach.
+This App acts as a safe "man in the middle" software so that our frontend/e-commerce backend can safely request randomized CF subdomains without exposing sensitive data such as your Cloudflare API Keys to the E-Commerce Software in case of a Breach.
+This software uses a list of about 1000 random subdomain-friendly strings and picks one. Once it has been used, the string will be removed from the list so that there are no doubles.
 
 Built on Windows, you might have to reinstall the node packages. 
 Used Packages: `request, express, dotenv`
