@@ -1,88 +1,83 @@
-var express = require('express');
-var ApiServer = express();
-var sendRequest = require('request');
+require('dotenv').config();
 
+const express = require('express');
+const ApiServer = express();
+const sendRequest = require('request');
 
 const APISecret = process.env.APISecret;
 const APIPort = process.env.APIPort;
-
 const CFAuthKey = process.env.CFAuthKey;
-const CFAuthEmail = process.env.CFAuthEmail;
-const CFApiURL = process.env.CFApiURL;
+const CFApiURL = "https://api.cloudflare.com/client/v4/zones/" + process.env.CFZoneID + "/dns_records";
 
-function sendLogging(logmsg) {
-    console.log(logmsg.toString());
-}
+ApiServer.use(express.json());
 
-ApiServer.listen(APIPort, function () {
-    sendLogging('API ist Online :)')
-})
+function sendLogging(msg) { console.log(String(msg)); }
 
+ApiServer.listen(APIPort, () => sendLogging('API ist Online :)'));
 
 function getRandomName(service) {
-    const name = "testName";
+    let name = "testName";
 
-    //TODO: generate name
+    //TODO: NAME GENERIEREN
 
-    if(service == "minecraft" ){
-        service = "_minecraft._tcp."
+    if (service === "minecraft") {
+
+        service = "_minecraft._tcp.";
+
     }
 
-    name = service+name;
-
-    return name;
+    return service + name;
 }
-ApiServer.post('/getAndCreateDomain', function (req, res) {
-    sendLogging("API Zugriff!!")
-    var recData = ''
 
-    req.on('data', function (data) {
-        recData = JSON.parse(data.toString())
+ApiServer.post('/getAndCreateDomain', (req, res) => {
+    sendLogging("API Zugriff!!");
 
-        if (recData.authkey === APISecret) {
+    const authHeader = req.get('Authorization'); 
+    if (!authHeader || authHeader !== APISecret) {
+        sendLogging("Ungültiger oder fehlender Authorization-Header");
+        return res.status(401).json({ error: "Unauthorized" });
+    }
 
-            srvName = getRandomName(recData.service)
+    if (!req.is('application/json')) {
+        sendLogging("Non JSON data received!");
+        return res.status(415).end();
+    }
 
-            const bodyData = {
-                "name": srvName,
-                "type": "SRV",
-                "ttl": "1",
-                "data": {
-                    "port": recData.ogPort,
-                    "priority": "10",
-                    "target": recData.ogTarget,
-                    "weight": "10"
-                }
-            };
+    const recData = req.body;
 
-            request({
-                headers: {
-                    'X-Auth-Email': CFAuthEmail,
-                    'X-Auth-Key': CFAuthKey,
-                    'Content-Type': 'application/json'
-                },
-                uri: CFApiURL,
-                body: bodyData,
-                method: 'PUT'
-            }, function (err, res, body) {
-                if (!err && res.statusCode == 200) {
-                        console.log(body);
+    const srvName = getRandomName(recData.service) + ".egopvp-hosting.com";
+  //  sendLogging(srvName);
 
-                        sendLogging("Erfolgreich! erstellt!")
+    const bodyData = {
+        name: srvName,
+        type: "SRV",
+        ttl: 1,
+        comment: `${recData.ogTarget} - ${recData.ogPort}`,
+        data: {
+            port: Number(recData.ogPort),
+            priority: 10,
+            target: recData.ogTarget,
+            weight: 10
+        }
+    };
+ //   sendLogging(JSON.stringify(bodyData));
 
-                        res.status('200').end('');
-
-                    } else {
-                        sendLogging(err);
-                        sendLogging("\n");
-                        sendLogging(res);
-                    }
-            });
-
-
+    sendRequest({
+        method: 'POST',
+        uri: CFApiURL,
+        headers: { Authorization: `Bearer ${CFAuthKey}` },
+        json: true,              
+        body: bodyData           
+    }, (err, res2, body) => {
+        if (err) {
+            sendLogging("Transportfehler: " + err.message);
+            return res.status(502).end();
+        }
+        //   sendLogging(`CF status= ${res2.statusCode} body= ${JSON.stringify(body)}`);
+        if (res2.statusCode >= 200 && res2.statusCode < 300) {
+            return res.status(200).end();
         } else {
-            sendLogging('**API** \n Anfrage ist Unverified \nKey: ' + recData.key)
-            res.status('418').end();
+            return res.status(400).end();
         }
     });
-})
+});
