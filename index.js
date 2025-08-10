@@ -8,6 +8,7 @@ const sendRequest = require('request');
 
 const APISecret = process.env.APISecret;
 const APIPort = process.env.APIPort;
+const DomainSuffix = process.env.DomainSuffix;
 const CFAuthKey = process.env.CFAuthKey;
 const CFApiURL = "https://api.cloudflare.com/client/v4/zones/" + process.env.CFZoneID + "/dns_records";
 
@@ -104,13 +105,30 @@ ApiServer.post('/removeDomain', (req, res) => {
         sendLogging("Non JSON data received!");
         return res.status(415).end();
     }
-    const { oldDomain } = req.body || {};
 
+    const { oldDomain, service } = req.body || {};
     if (!oldDomain || typeof oldDomain !== 'string') {
         return res.status(400).json({ error: 'Field "oldDomain" is required (string).' });
     }
 
-    const listUri = `${CFApiURL}?type=SRV&name=${encodeURIComponent(oldDomain)}`;
+    let prefix = String(oldDomain).trim();
+    if (prefix.toLowerCase().endsWith(DomainSuffix)) {
+        prefix = prefix.slice(0, -DomainSuffix.length);
+    }
+
+    const servicePrefix = getService(service || "");   
+    if (servicePrefix && prefix.toLowerCase().startsWith(servicePrefix.toLowerCase())) {
+        prefix = prefix.slice(servicePrefix.length);
+    }
+
+    const fullRecordName = `${servicePrefix}${prefix}${DomainSuffix}`;
+
+    console.log(DomainSuffix)
+    console.log(prefix)
+    console.log(servicePrefix)
+
+
+    const listUri = `${CFApiURL}?type=SRV&name=${encodeURIComponent(fullRecordName)}`;
 
     sendRequest({
         method: 'GET',
@@ -129,7 +147,7 @@ ApiServer.post('/removeDomain', (req, res) => {
 
         const results = Array.isArray(body.result) ? body.result : [];
         if (results.length === 0) {
-            sendLogging(`Kein SRV-Record gefunden für ${oldDomain}`);
+            sendLogging(`Kein SRV-Record gefunden für ${fullRecordName}`);
             return res.status(404).end();
         }
 
@@ -156,15 +174,13 @@ ApiServer.post('/removeDomain', (req, res) => {
 
                 remaining--;
                 if (remaining === 0) {
-                    if (deleted > 0 && failed === 0) {
-                        sendLogging("Alle Gelöscht")
+                    if (deleted > 0) {
+                        addPrefixBackToFile(prefix);
+                        if (failed === 0) {
+                            return res.status(200).end();
+                        }
                         return res.status(200).end();
                     }
-                    if (deleted > 0 && failed > 0) {
-                        sendLogging("Teile Gelöscht")
-                        return res.status(200).end();
-                    }
-                    sendLogging({ error: 'Deletion failed', oldDomain, failedItems })
                     return res.status(500).end();
                 }
             });
@@ -204,4 +220,18 @@ function getRandomAndRemove() {
         console.error('Fehler beim Schreiben der Datei:', err);
     }
     return chosen;
+}
+
+function addPrefixBackToFile(prefix) {
+    const clean = String(prefix || '').trim();
+    if (!clean) return;
+    if (!stringList.includes(clean)) {
+        stringList.push(clean);
+        try {
+            fs.writeFileSync(filePath, stringList.join('\n') + '\n', 'utf8');
+            sendLogging(`Prefix wiederhergestellt: ${clean}`);
+        } catch (err) {
+            console.error('Fehler beim Zurückschreiben der Datei:', err);
+        }
+    }
 }
