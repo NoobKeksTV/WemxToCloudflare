@@ -27,6 +27,7 @@ Prefixes are drawn from `strings.txt` (one per line). When you create a domain, 
 git clone https://github.com/NoobKeksTV/WemxToCloudflare.git
 cd WemxToCloudflare
 npm install express request dotenv
+node index.js
 ```
 
 ### docker-compose
@@ -36,6 +37,7 @@ git clone https://github.com/NoobKeksTV/WemxToCloudflare.git
 cd WemxToCloudflare/Dockerized
 docker-compose up-d
 ```
+The server listens on `http://localhost:${APIPort}` (default `9765`).
 
 ---
 
@@ -71,25 +73,6 @@ delta
 - On **remove**, the corresponding prefix is added back to `strings.txt` (only once).
 
 ---
-
-## Run the App
-The server listens on `http://localhost:${APIPort}` (default `8889`).
-
-### Directly:
-
-```bash
-node index.js
-# API is Online :)
-```
-
-
-### Dockerized:
-```bash
-docker-compose up-d
-```
----
-
-
 
 ## Authentication
 Every endpoint requires the header:
