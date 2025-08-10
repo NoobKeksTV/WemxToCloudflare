@@ -22,20 +22,17 @@ ApiServer.listen(APIPort, () => sendLogging('API ist Online :)'));
 
 loadStrings();
 
-function getRandomName(service) {
-    let name = getRandomAndRemove();
+function getRandomName(service = "") {
+    const name = getRandomAndRemove();
+    if (!name) return null;
 
-    if (service == "minecraft") {
-
+    if (service === "minecraft") {
         service = "_minecraft._tcp.";
-
+    } else if (service && !service.endsWith(".")) {
+        service = service + ".";
     }
 
-    if (!name) {
-        return null;
-    } else {
-        return service + name;
-    }
+    return service + name;
 }
 
 ApiServer.post('/getAndCreateDomain', (req, res) => {
@@ -55,7 +52,7 @@ ApiServer.post('/getAndCreateDomain', (req, res) => {
     const recData = req.body;
 
     const randomName = getRandomName(recData.service);
-    const srvName = + randomName + ".egopvp-hosting.com";
+    const srvName = `${randomName}.egopvp-hosting.com`;
 
     if (randomName == "null" || !randomName || randomName == null) {
         return res.status(500).json({ error: "No Strings available" });
@@ -96,14 +93,12 @@ ApiServer.post('/getAndCreateDomain', (req, res) => {
 ApiServer.post('/removeDomain', (req, res) => {
     sendLogging("API Zugriff!! /removeDomain");
 
-    // 1) Auth check (gleich wie bei /getAndCreateDomain)
     const authHeader = req.get('Authorization');
     if (!authHeader || authHeader !== APISecret) {
         sendLogging("Ungültiger oder fehlender Authorization-Header");
         return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // 2) Content-Type & Payload prüfen
     if (!req.is('application/json')) {
         sendLogging("Non JSON data received!");
         return res.status(415).end();
@@ -113,7 +108,6 @@ ApiServer.post('/removeDomain', (req, res) => {
         return res.status(400).json({ error: 'Field "oldDomain" is required (string).' });
     }
 
-    // 3) Cloudflare: passenden SRV-Record per Name suchen
     const listUri = `${CFApiURL}?type=SRV&name=${encodeURIComponent(oldDomain)}`;
 
     sendRequest({
@@ -137,7 +131,6 @@ ApiServer.post('/removeDomain', (req, res) => {
             return res.status(404).json({ error: 'Record not found', oldDomain });
         }
 
-        // 4) Alle gefundenen Records löschen
         let remaining = results.length;
         let deleted = 0;
         let failed = 0;
@@ -169,7 +162,6 @@ ApiServer.post('/removeDomain', (req, res) => {
                         sendLogging("Teile Gelöscht")
                         return res.status(200).json({ ok: true, deleted, failed, oldDomain, failedItems });
                     }
-                    // Nichts gelöscht
                     sendLogging({ error: 'Deletion failed', oldDomain, failedItems })
                     return res.status(500).end();
                 }
