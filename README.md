@@ -22,10 +22,9 @@ Prefixes are drawn from `strings.txt` (one per line). When you create a domain, 
 
 ## Installation
 ```bash
-git clone <your-repo-url>
-cd <repo>
+git clone https://github.com/NoobKeksTV/WemxToCloudflare.git
+cd WemxToCloudflare
 npm install express request dotenv
-# (optional) pm2 or another process manager
 ```
 
 ---
