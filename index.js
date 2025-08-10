@@ -32,7 +32,8 @@ function getService(service = ""){
  if (service === "minecraft") {
         service = "_minecraft._tcp.";
     } else if (service && !service.endsWith(".")) {
-        service = service + ".";
+        service = "";
+        sendLogging("Unknown Service... Setting no Service")
     }
     return service;
 }
