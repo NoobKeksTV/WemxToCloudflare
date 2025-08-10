@@ -1,24 +1,191 @@
-# WemxToCloudflare
+# WemX to Cloudflare - Domain Manager (Node.js)
 
-This App acts as a safe "man in the middle" software so that our frontend/e-commerce backend can safely request randomized CF subdomains without exposing sensitive data such as your Cloudflare API Keys to the E-Commerce Software in case of a Breach.
-This software uses a list of about 1000 random subdomain-friendly strings and picks one. Once it has been used, the string will be removed from the list so that there are no doubles.
-
-Built on Windows, you might have to reinstall the node packages. 
-Used Packages: `request, express, dotenv`
-
+Small Express service to **allocate** and **reclaim** SRV DNS names on Cloudflare for game servers.  
+Prefixes are drawn from `strings.txt` (one per line). When you create a domain, the chosen prefix is **removed** from the file. When you remove a domain, the prefix is **added back**.
 
 ---
 
-How To use:
+## Features
+- Create SRV records in your Cloudflare zone under a fixed domain suffix
+- Optional service prefix for SRV names (currently supports `minecraft` → `_minecraft._tcp.`)
+- Prefix pool managed via `strings.txt` (each prefix used once until reclaimed)
+- Simple header auth with a shared secret
 
-Send a request to this API: `http://localhost:9765/getAndCreateDomain` , Insert Header "Authorization" with the Auth Key from the .env file, add the following data as json: `ogTarget, ogPort, service`.
-ogTarget: The original Domain / IP of a Server
-ogPort: The original Port of a Server
-service: The type of Service/Software running on there e.g. "minecraft" or "teamspeak" or "sip".
+---
 
-**CURRENTLY ONLY SUPPORTS MINECRAFT NATIVELY**
+## Requirements
+- Node.js 16+ (LTS recommended)
+- A Cloudflare API token with **Zone:DNS Edit** for the target zone
+- Your Cloudflare **Zone ID**
 
-Send the Request as a `POST` request and be presented with a random subdomain being added to your CF Account and get that domain as a string.
+---
 
+## Installation
+```bash
+git clone <your-repo-url>
+cd <repo>
+npm install express request dotenv
+# (optional) pm2 or another process manager
+```
 
+---
 
+## Configuration (`.env`)
+```ini
+# Server
+APIPort=8889
+
+# Simple header auth (exact match; no "Bearer" etc.)
+APISecret=your_super_secret
+
+# Cloudflare
+CFZoneID=your_cloudflare_zone_id
+CFAuthKey=your_cloudflare_api_token
+
+# Domain suffix used when creating & deleting a domain
+# e.g. ".google.de"
+DomainSuffix=your_domain_suffix
+```
+
+---
+
+## Prefix Pool (`strings.txt`)
+Place a `strings.txt` file next to your script (`index.js`).  
+One prefix per line, e.g.:
+```
+alpha
+bravo
+charlie
+delta
+```
+- On **create**, a random prefix is picked and removed from `strings.txt`.
+- On **remove**, the corresponding prefix is added back to `strings.txt` (only once).
+
+---
+
+## Run
+```bash
+node index.js
+# API ist Online :)
+```
+
+The server listens on `http://localhost:${APIPort}` (default `8889`).
+
+---
+
+## Authentication
+Every endpoint requires the header:
+```
+Authorization: <APISecret>
+```
+It must match your `.env` value **exactly** (no `Bearer` scheme).
+
+---
+
+## Endpoints
+
+### 1) `POST /getAndCreateDomain`
+Creates an SRV DNS record in your Cloudflare zone using a random prefix from `strings.txt`.
+
+**Headers**
+- `Authorization: <APISecret>`
+- `Content-Type: application/json`
+
+**Body (JSON)**
+| Field     | Type   | Required | Description |
+|-----------|--------|----------|-------------|
+| `service` | string | no       | Which Service the SRV record is. Example `minecraft` |
+| `ogTarget`| string | yes      | SRV target FQDN, e.g. `mc.backend.example.com`. |
+| `ogPort`  | number | yes      | SRV target port, e.g. `25565`. |
+
+**Behavior**
+1. Selects a random prefix from `strings.txt` and removes it from the file.
+2. Builds the SRV name:  
+   ```
+   <servicePrefix><prefix><DomainSuffix>
+   ```
+   
+   Example:
+   ```
+   _minecraft._tcp.golden-squad.egopvp-hosting.com
+   ```
+   where `<servicePrefix>` is `_minecraft._tcp.`, `<prefix>` is `golden-squad` and `<DomainSuffix>` is `.egopvp-hosting.com` 
+3. Creates the SRV record on Cloudflare with the given target/port.
+
+**Response**
+- `200 OK` — returns the allocated hostname (plain text), e.g. `charlie.egopvp-hosting.com`
+- `401 Unauthorized` — wrong/missing auth
+- `415 Unsupported Media Type` — missing JSON
+- `500` — no prefixes available
+- `400` — Cloudflare error while creating
+
+**Example (curl)**
+```bash
+curl -s -X POST "http://localhost:8889/getAndCreateDomain"   -H "Authorization: your_super_secret"   -H "Content-Type: application/json"   -d '{
+    "service": "minecraft",
+    "ogTarget": "mc.backend.example.com",
+    "ogPort": 25565
+  }'
+# → e.g. charlie.egopvp-hosting.com
+```
+
+---
+
+### 2) `POST /removeDomain`
+Deletes the SRV DNS record and returns the **prefix** to `strings.txt`.
+
+**Headers**
+- `Authorization: <APISecret>`
+- `Content-Type: application/json`
+
+**Body (JSON)**
+| Field       | Type   | Required | Description |
+|-------------|--------|----------|-------------|
+| `oldDomain` | string | yes      | The domain you want to remove. (e.g. `charlie.egopvp-hosting.com`) |
+| `service`   | string | no       | Same semantics as in create: `"minecraft"` uses `_minecraft._tcp.`, otherwise no prefix. Needed to search the SRV Record on CloudFlare. |
+
+**Behavior**
+1. Normalizes `oldDomain`:
+   - Strips it from `DomainSuffix` to get the **prefix**.
+   - If it starts with the service prefix (e.g. `_minecraft._tcp.`), strips that too so only the pure **prefix** remains.
+2. Rebuilds the full SRV record name to match on Cloudflare:  
+   ```
+   <servicePrefix><prefix><DomainSuffix>
+   ```
+3. Finds and deletes all matching SRV records.
+4. If at least one record was deleted, appends the **prefix** back to `strings.txt` (only if not already present).
+
+**Response**
+- `200 OK` — deleted; prefix returned to pool
+- `401 Unauthorized` — wrong/missing auth
+- `404 Not Found` — no SRV record matched
+- `415 Unsupported Media Type` — missing JSON
+- `500/502` — Cloudflare/network error
+
+**Example (curl) – remove a Minecraft SRV**
+```bash
+# If you previously received "charlie.egopvp-hosting.com":
+curl -s -X POST "http://localhost:8889/removeDomain"   -H "Authorization: your_super_secret"   -H "Content-Type: application/json"   -d '{
+    "oldDomain": "charlie.egopvp-hosting.com",
+    "service": "minecraft"
+  }'
+# → 200 if deleted; prefix "charlie" is added back to strings.txt
+```
+---
+
+## Notes & Tips
+- The auth header must equal `APISecret` **exactly** (no `Bearer`).
+- Keep `strings.txt` filled to avoid `500 No Strings available` on creation.
+- Ensure `DomainSuffix` in `.env` matches the suffix used for creation (`.egopvp-hosting.com` in your current code).
+- Cloudflare token should be scoped minimally (Zone:DNS Edit on the specific zone) for Safety reasons.
+
+---
+
+## Troubleshooting
+- **401 Unauthorized** — Missing or wrong `Authorization` header.
+- **415 Unsupported Media Type** — Send `Content-Type: application/json` and valid JSON.
+- **500 No Strings available** — `strings.txt` is empty; add prefixes (one per line).
+- **404 on remove** — Check `DomainSuffix` and `service` so the computed SRV name matches exactly what was created.
+- **Cloudflare errors** — Verify `CFZoneID`, `CFAuthKey` permissions, and record name/zone.
+
+---
