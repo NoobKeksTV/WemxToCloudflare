@@ -55,7 +55,7 @@ ApiServer.post('/getAndCreateDomain', (req, res) => {
 
     const randomName = getRandomName();
     const Service = getService(recData.service);
-    const srvName = `${Service}${randomName}.egopvp-hosting.com`;
+    const srvName = `${Service}${randomName}${DomainSuffix}`;
 
     if (randomName == "null" || !randomName || randomName == null) {
         return res.status(500).json({ error: "No Strings available" });
@@ -89,7 +89,7 @@ ApiServer.post('/getAndCreateDomain', (req, res) => {
         if (res2.statusCode >= 200 && res2.statusCode < 300) {
             return res.status(200).end(`${randomName}.egopvp-hosting.com`);
         } else {
-            return res.status(400).end("CF Error");
+            return res.status(400).end();
         }
     });
 });
@@ -123,11 +123,6 @@ ApiServer.post('/removeDomain', (req, res) => {
     }
 
     const fullRecordName = `${servicePrefix}${prefix}${DomainSuffix}`;
-
-    console.log(DomainSuffix)
-    console.log(prefix)
-    console.log(servicePrefix)
-
 
     const listUri = `${CFApiURL}?type=SRV&name=${encodeURIComponent(fullRecordName)}`;
 
