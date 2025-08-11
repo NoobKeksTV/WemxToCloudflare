@@ -31,9 +31,17 @@ function getRandomName() {
 function getService(service = ""){
  if (service === "minecraft") {
         service = "_minecraft._tcp.";
-    } else if (service && !service.endsWith(".")) {
-        service = "";
-        sendLogging("Unknown Service... Setting no Service")
+ }else if(service === "sinusbot") {
+        service = "_sinusbot._tcp.";
+ }else if(service === "nginx") {
+        service = "_http._tcp.";
+ }else if(service === "teamspeak3") {
+        service = "_ts3._udp.";
+    }else if(service === "nodejs") {
+        service = "_http._tcp.";
+    } else {
+        service = "INVALID";
+        sendLogging("Unknown Service... Returning Real IP")
     }
     return service;
 }
@@ -55,6 +63,11 @@ ApiServer.post('/getAndCreateDomain', (req, res) => {
 
     const randomName = getRandomName();
     const Service = getService(recData.service);
+
+    if(service == "INVALID"){
+        return res.status(200).end(`${recData.ogTarget}:${recData.ogPort}`);
+    }
+    
     const srvName = `${Service}${randomName}${DomainSuffix}`;
 
     if (randomName == "null" || !randomName || randomName == null) {
@@ -64,7 +77,7 @@ ApiServer.post('/getAndCreateDomain', (req, res) => {
         name: srvName,
         type: "SRV",
         ttl: 1,
-        comment: `${recData.ogTarget} - ${recData.ogPort}`,
+        comment: `${recData.comment}`,
         data: {
             port: Number(recData.ogPort),
             priority: 10,
