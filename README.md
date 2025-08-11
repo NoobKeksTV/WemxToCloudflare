@@ -3,6 +3,10 @@
 Small Express service to **allocate** and **reclaim** SRV DNS names on Cloudflare for game servers.  
 Prefixes are drawn from `strings.txt` (one per line). When you create a domain, the chosen prefix is **removed** from the file. When you remove a domain, the prefix is **added back**.
 
+Why "WemX to CF" ? Well. WemX is the Software we use for our Customer-Panel. And CloudFlare is our Domain provider.
+
+This Software can absolutely be used for any other case where you want to create random Vanity Domains and use them in another software.
+
 ---
 
 ## Features
@@ -10,6 +14,7 @@ Prefixes are drawn from `strings.txt` (one per line). When you create a domain, 
 - Optional service prefix for SRV names (currently supports `minecraft` → `_minecraft._tcp.`)
 - Prefix pool managed via `strings.txt` (each prefix used once until reclaimed)
 - Simple header auth with a shared secret
+- Return the Original IP : Port if the Service wasnt recognised...
 
 ---
 
