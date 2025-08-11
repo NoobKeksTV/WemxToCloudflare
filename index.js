@@ -28,16 +28,17 @@ function getRandomName() {
     if (!name) return null;
     return name;
 }
-function getService(service = ""){
- if (service === "minecraft") {
+function getService(serv) {
+    var service = serv
+    if (service == "minecraft") {
         service = "_minecraft._tcp.";
- }else if(service === "sinusbot") {
-        service = "_sinusbot._tcp.";
- }else if(service === "nginx") {
+    } else if (service == "sinusbot") {
         service = "_http._tcp.";
- }else if(service === "teamspeak3") {
+    } else if (service == "nginx") {
+        service = "_http._tcp.";
+    } else if (service == "teamspeak3") {
         service = "_ts3._udp.";
-    }else if(service === "nodejs") {
+    } else if (service == "nodejs") {
         service = "_http._tcp.";
     } else {
         service = "INVALID";
@@ -64,10 +65,10 @@ ApiServer.post('/getAndCreateDomain', (req, res) => {
     const randomName = getRandomName();
     const Service = getService(recData.service);
 
-    if(service == "INVALID"){
+    if (Service == "INVALID") {
         return res.status(200).end(`${recData.ogTarget}:${recData.ogPort}`);
     }
-    
+
     const srvName = `${Service}${randomName}${DomainSuffix}`;
 
     if (randomName == "null" || !randomName || randomName == null) {
@@ -131,7 +132,7 @@ ApiServer.post('/removeDomain', (req, res) => {
         prefix = prefix.slice(0, -DomainSuffix.length);
     }
 
-    const servicePrefix = getService(service || "");   
+    const servicePrefix = getService(service || "");
     if (servicePrefix && prefix.toLowerCase().startsWith(servicePrefix.toLowerCase())) {
         prefix = prefix.slice(servicePrefix.length);
     }
