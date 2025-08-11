@@ -86,6 +86,10 @@ It must match your `.env` value **exactly** (no `Bearer` scheme).
 | Service     | Service Prefix   | 
 |-----------|--------|
 | minecraft | _minecraft._tcp. |
+| sinusbot | _http._tcp.|
+| nginx | _http._tcp. |
+| teamspeak3 | _ts3._udp.|
+| nodejs | _http._tcp.|
 
 ---
 
