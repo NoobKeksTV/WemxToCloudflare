@@ -104,6 +104,7 @@ Creates an SRV DNS record in your Cloudflare zone using a random prefix from `st
 | `service` | string | no       | Which Service the SRV record is. Example `minecraft` |
 | `ogTarget`| string | yes      | SRV target FQDN, e.g. `mc.backend.example.com`. |
 | `ogPort`  | number | yes      | SRV target port, e.g. `25565`. |
+| `comment`  | string | no      | What comment to add to the SRV record? |
 
 **Behavior**
 1. Selects a random prefix from `strings.txt` and removes it from the file.
@@ -128,7 +129,7 @@ Creates an SRV DNS record in your Cloudflare zone using a random prefix from `st
 
 **Example (curl)**
 ```bash
-curl -s -X POST "http://localhost:8889/getAndCreateDomain"   -H "Authorization: your_super_secret"   -H "Content-Type: application/json"   -d '{
+curl -s -X POST "http://localhost:9765/getAndCreateDomain"   -H "Authorization: your_super_secret"   -H "Content-Type: application/json"   -d '{
     "service": "minecraft",
     "ogTarget": "mc.backend.example.com",
     "ogPort": 25565
@@ -172,7 +173,7 @@ Deletes the SRV DNS record and returns the **prefix** to `strings.txt`.
 **Example (curl) – remove a Minecraft SRV**
 ```bash
 # If you previously received "charlie.egopvp-hosting.com":
-curl -s -X POST "http://localhost:8889/removeDomain"   -H "Authorization: your_super_secret"   -H "Content-Type: application/json"   -d '{
+curl -s -X POST "http://localhost:9765/removeDomain"   -H "Authorization: your_super_secret"   -H "Content-Type: application/json"   -d '{
     "oldDomain": "charlie.egopvp-hosting.com",
     "service": "minecraft"
   }'
