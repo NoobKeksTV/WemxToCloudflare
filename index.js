@@ -33,7 +33,7 @@ function getService(serv) {
     if (service == "minecraft") {
         service = "_minecraft._tcp.";
     } else if (service == "sinusbot") {
-        service = "_http._tcp.";
+        service = "_sinusbot._tcp.";
     } else if (service == "nginx") {
         service = "_http._tcp.";
     } else if (service == "teamspeak3") {
@@ -133,6 +133,11 @@ ApiServer.post('/removeDomain', (req, res) => {
     }
 
     const servicePrefix = getService(service || "");
+
+     if (servicePrefix == "INVALID") {
+        sendLogging("Invalid Service, no deleting needed.");
+        return res.status(200).end();
+    }
     if (servicePrefix && prefix.toLowerCase().startsWith(servicePrefix.toLowerCase())) {
         prefix = prefix.slice(servicePrefix.length);
     }
